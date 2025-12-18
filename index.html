@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EngenharIA ATP | APavan Engenharia</title>
+    <meta name="description" content="Engenharia Estrutural e Consultoria Técnica em Concreto Armado conforme NBR 6118.">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bibliotecas Externas (CDNs) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- Configuração do Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Montserrat', 'sans-serif'],
+                    },
+                    colors: {
+                        gold: {
+                            400: '#E6C35C',
+                            500: '#D4AF37',
+                            600: '#B5952F',
+                        },
+                        dark: {
+                            900: '#0b0b0b',
+                            800: '#121212',
+                            700: '#1a1a1a',
+                        }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-out',
+                        'fade-in-up': 'fadeInUp 0.6s ease-out',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(15px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0b0b0b;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        .glass-panel {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .animate-spin-slow { animation: spin 2s linear infinite; }
+    </style>
+</head>
+<body class="min-h-screen relative pb-12 font-sans selection:bg-gold-500 selection:text-black">
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed top-6 left-1/2 transform -translate-x-1/2 z-[100] w-[90%] max-w-sm hidden transition-all duration-300 pointer-events-none">
+        <div id="toast-body" class="glass-panel p-4 rounded-xl shadow-2xl border-l-4 flex items-center gap-3">
+            <i id="toast-icon" data-lucide="check-circle-2" class="w-5 h-5"></i>
+            <div>
+                <p id="toast-title" class="text-sm font-bold text-white">Sucesso</p>
+                <p id="toast-msg" class="text-xs text-gray-300"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div id="modal-auth" class="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md hidden animate-fade-in">
+        <div class="w-full max-w-xs bg-dark-900 border border-white/10 rounded-2xl p-6 shadow-2xl relative">
+            <button onclick="toggleModal('modal-auth', false)" class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors">
+                <i data-lucide="x-circle" class="w-5 h-5"></i>
+            </button>
+            <div class="flex flex-col items-center mb-6 text-center">
+                <div class="p-3 bg-gold-500/10 rounded-full mb-3 border border-gold-500/20">
+                    <i data-lucide="lock" class="w-6 h-6 text-gold-500"></i>
+                </div>
+                <h3 class="text-white font-bold text-lg">Área Restrita</h3>
+                <p class="text-gray-400 text-xs mt-1">Acesso exclusivo para administradores.</p>
+            </div>
+            <form onsubmit="verifyAdmin(event)" class="space-y-4">
+                <input type="password" id="admin-pass" class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-center text-white focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500/50 transition-all placeholder-gray-600" placeholder="Digite a senha" />
+                <button type="submit" class="w-full bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-400 hover:to-gold-500 text-dark-900 font-bold py-3 rounded-xl transition-all shadow-lg">Entrar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Background Layers -->
+    <div class="fixed inset-0 z-0 pointer-events-none">
+        <div class="absolute inset-0 bg-cover bg-center opacity-30 transform scale-110" style="background-image: url('https://images.unsplash.com/photo-1590650046871-92c887180603?auto=format&fit=crop&w=1200');"></div>
+        <div class="absolute inset-0 bg-gradient-to-b from-dark-900/95 via-dark-900/98 to-dark-900"></div>
+    </div>
+
+    <div class="relative z-10 max-w-md mx-auto px-4 sm:px-0">
+        
+        <!-- Header -->
+        <header class="pt-12 pb-8 text-center animate-fade-in-up relative">
+            <button id="btn-back" onclick="navigate('form')" class="absolute left-0 top-12 p-2 bg-white/5 rounded-full hover:bg-gold-500/20 text-gold-500 transition-colors hidden">
+                <i data-lucide="arrow-left" class="w-5 h-5"></i>
+            </button>
+            <div class="relative inline-block mb-4 group cursor-pointer">
+                <div class="absolute -inset-1 rounded-full opacity-75 blur-md bg-gold-500/30 group-hover:opacity-100 transition duration-500"></div>
+                <img id="main-avatar" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80" class="relative w-32 h-32 rounded-full object-cover border-2 border-gold-500 shadow-2xl mx-auto bg-dark-800" alt="Avatar" />
+            </div>
+            <h1 class="text-3xl font-bold text-white tracking-tight mb-1">Ademilton Pavan</h1>
+            <p id="view-title" class="text-gold-400 text-xs font-bold tracking-[0.2em] uppercase">EngenharIA ATP</p>
+            <div class="flex justify-center items-center gap-2 mt-3 text-gray-400 text-xs">
+                <span class="bg-white/10 px-3 py-1 rounded-full border border-white/5">CREA SC 86959-8</span>
+                <span class="text-gold-500">•</span>
+                <span>Especialista em Estruturas</span>
+            </div>
+        </header>
+
+        <!-- VIEW: FORM -->
+        <div id="view-form" class="space-y-10 animate-fade-in-up">
+            <!-- Action Grid -->
+            <div class="grid grid-cols-2 gap-3">
+                <a href="https://wa.me/5548999862981" target="_blank" class="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-gold-500/50 hover:bg-white/10 transition-all duration-300 group">
+                    <i data-lucide="message-circle" class="w-6 h-6 text-green-400 mb-2 group-hover:scale-110 transition-transform"></i>
+                    <span class="text-xs font-medium text-gray-300">WhatsApp</span>
+                </a>
+                <a href="https://maps.app.goo.gl/mEogCZDZGaro5fp27" target="_blank" class="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-gold-500/50 hover:bg-white/10 transition-all duration-300 group">
+                    <i data-lucide="map-pin" class="w-6 h-6 text-red-400 mb-2 group-hover:scale-110 transition-transform"></i>
+                    <span class="text-xs font-medium text-gray-300">Localização</span>
+                </a>
+                <a href="mailto:apavaneng@gmail.com" class="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-gold-500/50 hover:bg-white/10 transition-all duration-300 group">
+                    <i data-lucide="mail" class="w-6 h-6 text-blue-400 mb-2 group-hover:scale-110 transition-transform"></i>
+                    <span class="text-xs font-medium text-gray-300">E-mail</span>
+                </a>
+                <a href="https://apavan.com.br" target="_blank" class="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-gold-500/50 hover:bg-white/10 transition-all duration-300 group">
+                    <i data-lucide="globe" class="w-6 h-6 text-gold-400 mb-2 group-hover:scale-110 transition-transform"></i>
+                    <span class="text-xs font-medium text-gray-300">Site</span>
+                </a>
+            </div>
+
+            <!-- NBR Carousel -->
+            <section>
+                <div class="flex items-center justify-between mb-4 px-1">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-gold-500/20 rounded-lg"><i data-lucide="shield-check" class="w-5 h-5 text-gold-500"></i></div>
+                        <div>
+                            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Normas Técnicas</h2>
+                            <p class="text-[10px] text-gray-400">Base normativa (ABNT)</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex overflow-x-auto gap-3 pb-4 -mx-4 px-4 snap-x snap-mandatory scroll-smooth no-scrollbar" id="nbr-list">
+                    <!-- Injected by JS -->
+                </div>
+            </section>
+
+            <!-- Form -->
+            <section class="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl p-6 rounded-3xl border border-white/10 shadow-2xl">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-sm font-bold text-gold-500 uppercase tracking-wider flex items-center gap-2">
+                        <i data-lucide="file-text" class="w-4 h-4"></i> Solicitação Técnica
+                    </h2>
+                    <span class="text-[10px] text-gray-400">Orçamento & ATP</span>
+                </div>
+                <form id="request-form" onsubmit="submitToWhatsApp(event)" class="space-y-4">
+                    <select id="f-tipo" required class="w-full bg-dark-800/80 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-gold-500 transition-all appearance-none">
+                        <option value="">Tipo de Obra</option>
+                        <option value="Residencial Unifamiliar">Residencial Unifamiliar</option>
+                        <option value="Residencial Multifamiliar">Residencial Multifamiliar</option>
+                        <option value="Comercial">Comercial</option>
+                        <option value="Industrial">Industrial</option>
+                        <option value="Reforço Estrutural">Reforço Estrutural</option>
+                    </select>
+                    <div class="grid grid-cols-2 gap-4">
+                        <input type="number" id="f-area" placeholder="Área (m²)" required class="w-full bg-dark-800/80 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-gold-500 placeholder-gray-500" />
+                        <select id="f-padrao" required class="w-full bg-dark-800/80 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-gold-500 appearance-none">
+                            <option value="">Padrão</option>
+                            <option value="Baixo">Baixo</option>
+                            <option value="Médio">Médio</option>
+                            <option value="Alto">Alto</option>
+                        </select>
+                    </div>
+                    <input type="text" id="f-cidade" placeholder="Cidade / Estado" required class="w-full bg-dark-800/80 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-gold-500 placeholder-gray-500" />
+                    <textarea id="f-obs" rows="3" placeholder="Observações técnicas..." class="w-full bg-dark-800/80 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-gold-500 resize-none placeholder-gray-500"></textarea>
+                    
+                    <div class="relative group">
+                        <input type="file" id="f-file" class="hidden" onchange="updateFileLabel()" />
+                        <label for="f-file" id="l-file" class="flex flex-col items-center justify-center w-full px-4 py-4 border border-dashed border-white/20 rounded-xl cursor-pointer hover:border-gold-500/50 hover:bg-white/5 transition-all">
+                            <i data-lucide="upload-cloud" class="w-6 h-6 text-gray-400 group-hover:text-gold-400 mb-2"></i>
+                            <span id="t-file" class="text-xs text-gray-400">Anexar Projeto (PDF/DWG)</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" id="btn-submit" class="w-full bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-400 hover:to-gold-500 text-dark-900 font-bold py-4 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <i data-lucide="send" class="w-5 h-5"></i> ENVIAR PARA WHATSAPP
+                    </button>
+                </form>
+
+                <div class="grid grid-cols-2 gap-3 mt-6 pt-6 border-t border-white/10">
+                    <button onclick="handlePDF('report')" class="flex items-center justify-center gap-2 py-3 rounded-xl border border-white/10 hover:bg-white/5 hover:border-gold-500/30 text-xs text-gray-300 font-medium transition-all">
+                        <i data-lucide="file-text" class="w-4 h-4 text-gold-500"></i> Gerar Laudo
+                    </button>
+                    <button onclick="handlePDF('proposal')" class="flex items-center justify-center gap-2 py-3 rounded-xl border border-white/10 hover:bg-white/5 hover:border-gold-500/30 text-xs text-gray-300 font-medium transition-all">
+                        <i data-lucide="building-2" class="w-4 h-4 text-gold-500"></i> Gerar Proposta
+                    </button>
+                </div>
+            </section>
+        </div>
+
+        <!-- VIEW: DASHBOARD -->
+        <div id="view-dashboard" class="hidden space-y-6 animate-fade-in-up">
+            <div class="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-5 shadow-xl">
+                <h3 class="font-bold text-white text-sm mb-4 flex items-center gap-2">
+                    <i data-lucide="settings" class="w-4 h-4 text-gold-500"></i> Perfil do Engenheiro
+                </h3>
+                <div class="flex items-center gap-4">
+                    <img id="dash-avatar" src="" class="w-12 h-12 rounded-full object-cover border border-white/20" />
+                    <div class="flex-1">
+                        <label class="flex items-center gap-2 px-4 py-2 bg-gold-500/10 hover:bg-gold-500/20 text-gold-500 rounded-lg text-xs font-medium cursor-pointer border border-gold-500/30 w-fit transition-all">
+                            <i data-lucide="camera" class="w-3.5 h-3.5"></i> Alterar Foto
+                            <input type="file" accept="image/*" class="hidden" onchange="uploadAvatar(event)" />
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-end">
+                <div>
+                    <h2 class="text-xl font-bold text-gold-500 flex items-center gap-2"><i data-lucide="layout-dashboard" class="w-5 h-5"></i> Histórico</h2>
+                    <p class="text-xs text-gray-400">Solicitações registradas</p>
+                </div>
+                <div class="text-right">
+                    <span id="count-history" class="text-2xl font-bold text-white">0</span>
+                    <p class="text-[10px] text-gray-500 uppercase">Projetos</p>
+                </div>
+            </div>
+
+            <div id="list-history" class="space-y-4">
+                <!-- Injected by JS -->
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="text-center pb-8 mt-12 animate-fade-in">
+            <p class="text-[10px] text-gray-500 uppercase tracking-widest mb-2">© 2025 APavan Engenharia & Consultoria</p>
+            <div class="flex justify-center items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <div class="w-1.5 h-1.5 rounded-full bg-gold-500 animate-pulse"></div>
+                    <p class="text-[10px] text-gray-600">Marca em processo de registro – INPI</p>
+                </div>
+                <button id="btn-lock" onclick="toggleModal('modal-auth', true)" class="text-gray-700 hover:text-gold-500 transition-colors">
+                    <i data-lucide="lock" class="w-3 h-3"></i>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // --- CONSTANTES E DADOS ---
+        const WHATSAPP = "5548999862981";
+        const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80";
+        const NBRS = [
+            { id: "6118", code: "NBR 6118", title: "Concreto Armado", desc: "Dimensionamento e detalhamento estrutural.", type: "Estrutural" },
+            { id: "6120", code: "NBR 6120", title: "Cargas e Ações", desc: "Ações para cálculo de edificações.", type: "Cargas" },
+            { id: "6123", code: "NBR 6123", title: "Forças do Vento", desc: "Cálculo de pressões dinâmicas.", type: "Ventos" },
+            { id: "8681", code: "NBR 8681", title: "Segurança", desc: "Ações e segurança nas estruturas.", type: "Critérios" }
+        ];
+
+        // --- ESTADO ---
+        let historyData = JSON.parse(localStorage.getItem('apavan_history') || '[]');
+        let avatarData = localStorage.getItem('apavan_avatar') || DEFAULT_AVATAR;
+
+        // --- INICIALIZAÇÃO ---
+        window.onload = () => {
+            lucide.createIcons();
+            renderNBRs();
+            updateAvatars();
+            updateHistory();
+        };
+
+        // --- NAVEGAÇÃO E UI ---
+        function navigate(view) {
+            const form = document.getElementById('view-form');
+            const dash = document.getElementById('view-dashboard');
+            const back = document.getElementById('btn-back');
+            const lock = document.getElementById('btn-lock');
+            const title = document.getElementById('view-title');
+
+            if (view === 'dashboard') {
+                form.classList.add('hidden');
+                dash.classList.remove('hidden');
+                back.classList.remove('hidden');
+                lock.classList.add('hidden');
+                title.textContent = "Painel Administrativo";
+                updateHistory();
+            } else {
+                form.classList.remove('hidden');
+                dash.classList.add('hidden');
+                back.classList.add('hidden');
+                lock.classList.remove('hidden');
+                title.textContent = "EngenharIA ATP";
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function toggleModal(id, show) {
+            const el = document.getElementById(id);
+            if (show) {
+                el.classList.remove('hidden');
+                if(id === 'modal-auth') document.getElementById('admin-pass').focus();
+            } else {
+                el.classList.add('hidden');
+            }
+        }
+
+        function showNotify(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            const body = document.getElementById('toast-body');
+            const icon = document.getElementById('toast-icon');
+            const txt = document.getElementById('toast-msg');
+            const title = document.getElementById('toast-title');
+
+            txt.textContent = msg;
+            toast.classList.remove('hidden');
+            
+            if (type === 'error') {
+                body.className = "glass-panel p-4 rounded-xl shadow-2xl border-l-4 flex items-center gap-3 border-l-red-500";
+                icon.setAttribute('data-lucide', 'x-circle');
+                icon.className = "w-5 h-5 text-red-400";
+                title.textContent = "Atenção";
+            } else {
+                body.className = "glass-panel p-4 rounded-xl shadow-2xl border-l-4 flex items-center gap-3 border-l-green-500";
+                icon.setAttribute('data-lucide', 'check-circle-2');
+                icon.className = "w-5 h-5 text-green-400";
+                title.textContent = "Sucesso";
+            }
+            lucide.createIcons();
+            setTimeout(() => toast.classList.add('hidden'), 4000);
+        }
+
+        // --- LOGICA DE DADOS ---
+        function verifyAdmin(e) {
+            e.preventDefault();
+            const pass = document.getElementById('admin-pass').value;
+            if (pass === 'adm123') {
+                document.getElementById('admin-pass').value = '';
+                toggleModal('modal-auth', false);
+                navigate('dashboard');
+                showNotify("Bem-vindo, Ademilton!");
+            } else {
+                showNotify("Senha incorreta.", "error");
+            }
+        }
+
+        function updateFileLabel() {
+            const input = document.getElementById('f-file');
+            const label = document.getElementById('l-file');
+            const text = document.getElementById('t-file');
+            if (input.files.length > 0) {
+                label.classList.add('border-gold-500/50', 'bg-gold-500/10');
+                text.innerHTML = `<span class="text-gold-400 font-bold truncate block max-w-[200px]">${input.files[0].name}</span>`;
+            }
+        }
+
+        function uploadAvatar(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    avatarData = ev.target.result;
+                    localStorage.setItem('apavan_avatar', avatarData);
+                    updateAvatars();
+                    showNotify("Foto atualizada!");
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function updateAvatars() {
+            document.getElementById('main-avatar').src = avatarData;
+            document.getElementById('dash-avatar').src = avatarData;
+        }
+
+        function renderNBRs() {
+            const container = document.getElementById('nbr-list');
+            container.innerHTML = NBRS.map(n => `
+                <div class="snap-center flex-none w-64 glass-panel p-4 rounded-xl border border-white/10 hover:border-gold-500/30 transition-all flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-gold-400 font-bold text-sm">${n.code}</span>
+                            <span class="text-[10px] bg-white/10 px-2 py-0.5 rounded text-gray-300 border border-white/5">${n.type}</span>
+                        </div>
+                        <h4 class="text-white text-xs font-semibold mb-1">${n.title}</h4>
+                        <p class="text-gray-400 text-[10px] leading-relaxed line-clamp-2">${n.desc}</p>
+                    </div>
+                    <a href="https://www.google.com/search?q=${n.code}+pdf" target="_blank" class="mt-3 py-2 rounded-lg bg-white/5 hover:bg-gold-500/10 text-[10px] text-gold-500 font-bold text-center border border-white/5 transition-all">Acessar PDF</a>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function updateHistory() {
+            const list = document.getElementById('list-history');
+            const count = document.getElementById('count-history');
+            count.textContent = historyData.length;
+
+            if (historyData.length === 0) {
+                list.innerHTML = `<div class="text-center py-10 opacity-30"><i data-lucide="clock" class="w-8 h-8 mx-auto mb-2"></i><p class="text-xs">Nenhum registro.</p></div>`;
+            } else {
+                list.innerHTML = historyData.map((h, i) => `
+                    <div class="glass-panel border border-white/10 rounded-xl p-4 animate-fade-in">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-bold text-sm">${h.tipo}</h4>
+                                <p class="text-[10px] text-gray-400">${h.cidade} • ${h.area}m²</p>
+                            </div>
+                            <button onclick="removeItem(${i})" class="text-gray-600 hover:text-red-400 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>
+                        <p class="text-[10px] text-gray-500 mt-2 bg-black/20 p-2 rounded line-clamp-2">${h.obs || 'Sem observações.'}</p>
+                        <div class="mt-3 pt-2 border-t border-white/5 flex justify-between items-center">
+                            <span class="text-[9px] text-gray-600">${new Date(h.date).toLocaleDateString()}</span>
+                            <div class="flex gap-2">
+                                <button onclick="reGenPDF(${i}, 'report')" class="p-1 hover:text-gold-500 transition-colors"><i data-lucide="file-text" class="w-4 h-4"></i></button>
+                                <button onclick="reGenPDF(${i}, 'proposal')" class="p-1 hover:text-gold-500 transition-colors"><i data-lucide="building-2" class="w-4 h-4"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            lucide.createIcons();
+        }
+
+        function removeItem(index) {
+            if(confirm("Excluir registro?")) {
+                historyData.splice(index, 1);
+                localStorage.setItem('apavan_history', JSON.stringify(historyData));
+                updateHistory();
+            }
+        }
+
+        // --- SUBMISSÃO ---
+        async function submitToWhatsApp(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit');
+            const data = {
+                tipo: document.getElementById('f-tipo').value,
+                area: document.getElementById('f-area').value,
+                padrao: document.getElementById('f-padrao').value,
+                cidade: document.getElementById('f-cidade').value,
+                obs: document.getElementById('f-obs').value,
+                fileName: document.getElementById('f-file').files[0]?.name || '',
+                date: new Date().toISOString()
+            };
+
+            btn.disabled = true;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Processando...`;
+            lucide.createIcons();
+
+            historyData.unshift(data);
+            localStorage.setItem('apavan_history', JSON.stringify(historyData));
+
+            await new Promise(r => setTimeout(r, 1000));
+
+            const msg = `*Solicitação APavan*\n🏢 *Obra:* ${data.tipo}\n📐 *Área:* ${data.area}m²\n🏗️ *Pad:* ${data.padrao}\n📍 *Loc:* ${data.cidade}\n📝 *Obs:* ${data.obs || '-'}\n📎 *Arq:* ${data.fileName || 'Nenhum'}`;
+            
+            const url = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`;
+            window.open(url, '_blank');
+
+            btn.disabled = false;
+            btn.innerHTML = `<i data-lucide="send" class="w-5 h-5"></i> ENVIAR PARA WHATSAPP`;
+            lucide.createIcons();
+            showNotify("Solicitação enviada!");
+        }
+
+        // --- GERAÇÃO DE PDF ---
+        function handlePDF(type) {
+            const data = {
+                tipo: document.getElementById('f-tipo').value,
+                area: document.getElementById('f-area').value,
+                padrao: document.getElementById('f-padrao').value,
+                cidade: document.getElementById('f-cidade').value,
+                obs: document.getElementById('f-obs').value,
+                fileName: document.getElementById('f-file').files[0]?.name || ''
+            };
+            if(!data.tipo) return showNotify("Preencha a obra.", "error");
+            generateDocument(data, type);
+            showNotify("PDF Gerado!");
+        }
+
+        function reGenPDF(idx, type) {
+            generateDocument(historyData[idx], type);
+            showNotify("PDF Re-gerado!");
+        }
+
+        function generateDocument(data, docType) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const margin = 20;
+            const gold = [212, 175, 55];
+            const area = parseFloat(data.area) || 0;
+
+            // Header Background
+            doc.setFillColor(gold[0], gold[1], gold[2]);
+            doc.rect(0, 0, 210, 15, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(10);
+            doc.text("APAVAN ENGENHARIA & CONSULTORIA ESTRUTURAL", margin, 10);
+
+            // Title
+            doc.setTextColor(0, 0, 0);
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(18);
+            const title = docType === 'report' ? "LAUDO TÉCNICO ATP" : "PROPOSTA COMERCIAL";
+            doc.text(title, 105, 35, { align: 'center' });
+            
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text("Eng. Ademilton Pavan - CREA SC 86959-8", 105, 42, { align: 'center' });
+
+            let y = 60;
+            const addField = (l, v) => {
+                doc.setFont("helvetica", "bold"); doc.text(l, margin, y);
+                doc.setFont("helvetica", "normal"); doc.text(v || "-", margin + 45, y);
+                y += 8;
+            };
+
+            addField("Obra:", data.tipo);
+            addField("Área Estimada:", data.area + " m²");
+            addField("Padrão Construtivo:", data.padrao);
+            addField("Localização:", data.cidade);
+            addField("Data:", new Date().toLocaleDateString('pt-BR'));
+
+            y += 10;
+            if (docType === 'proposal') {
+                // PROPOSAL SPECIFIC SECTION
+                doc.setFont("helvetica", "bold");
+                doc.text("ESCOPO DE SERVIÇOS:", margin, y); y += 6;
+                doc.setFont("helvetica", "normal");
+                const scope = [
+                    "- Concepção estrutural otimizada conforme NBR 6118.",
+                    "- Dimensionamento completo de fundações e superestrutura.",
+                    "- Detalhamento das armaduras e fôrmas.",
+                    "- Emissão de ART (Anotação de Responsabilidade Técnica).",
+                    "- Suporte técnico durante a execução da estrutura."
+                ];
+                scope.forEach(line => { doc.text(line, margin, y); y += 5; });
+
+                y += 10;
+                doc.setFont("helvetica", "bold");
+                doc.text("INVESTIMENTO ESTIMADO:", margin, y); y += 8;
+                
+                let priceRange = "Sob Consulta";
+                if (area > 0 && area <= 100) priceRange = "R$ 3.500,00 a R$ 5.000,00";
+                else if (area > 100 && area <= 300) priceRange = "R$ 6.500,00 a R$ 9.500,00";
+                else if (area > 300) priceRange = "Proposta sob medida (Avaliação de Complexidade)";
+                
+                doc.setFontSize(14);
+                doc.setTextColor(gold[0], gold[1], gold[2]);
+                doc.text(priceRange, margin, y);
+                doc.setTextColor(0,0,0);
+                doc.setFontSize(10);
+                y += 10;
+                
+                doc.setFont("helvetica", "bold");
+                doc.text("PRAZO DE ENTREGA:", margin, y); y += 6;
+                doc.setFont("helvetica", "normal");
+                const deadline = area <= 200 ? "15 a 20 dias úteis." : "30 a 45 dias úteis.";
+                doc.text(deadline, margin, y);
+                y += 10;
+            } else {
+                // LAUDO / ATP SPECIFIC SECTION
+                doc.setFont("helvetica", "bold");
+                doc.text("FINALIDADE DA ANÁLISE:", margin, y); y += 6;
+                doc.setFont("helvetica", "normal");
+                doc.text("Verificação de conformidade normativa e estabilidade global da estrutura projetada.", margin, y);
+                y += 10;
+            }
+
+            // Observations
+            doc.setFont("helvetica", "bold");
+            doc.text("OBSERVAÇÕES ADICIONAIS:", margin, y); y += 6;
+            doc.setFont("helvetica", "normal");
+            const obsLines = doc.splitTextToSize(data.obs || "Nenhuma observação informada.", 170);
+            doc.text(obsLines, margin, y);
+            y += (obsLines.length * 5) + 30;
+
+            // Signature
+            if (y > 260) { doc.addPage(); y = 50; }
+            doc.setDrawColor(0,0,0);
+            doc.line(65, y, 145, y);
+            y += 5;
+            doc.setFont("helvetica", "bold");
+            doc.text("ADEMILTON PAVAN", 105, y, { align: 'center' });
+            y += 5;
+            doc.setFontSize(8);
+            doc.text("Engenheiro Civil - CREA SC 86959-8", 105, y, { align: 'center' });
+
+            doc.save(`${title.replace(/ /g, '_')}_${data.tipo.replace(/ /g, '_')}.pdf`);
+        }
+    </script>
+</body>
+</html>
